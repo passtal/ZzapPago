@@ -8,9 +8,9 @@
 
 | 주차 | 기간 | 주요 작업 | 상태 |
 |:---:|:---:|:---|:---:|
-| Week 1 | 2026.04.06 ~ | 프로젝트 기획 및 아키텍처 설계 | 🔄 진행중 |
-| Week 2 | TBD | 환경 구축 (FastAPI + React + DB) | ⬜ 예정 |
-| Week 3 | TBD | 인증 시스템 (JWT) / 사용자 관리 | ⬜ 예정 |
+| Week 1 | 2026.04.06 ~ 04.10 | 프로젝트 기획 + 환경 구축 + 공통 인프라 | ✅ 완료 |
+| Week 2 | 2026.04.13 ~ | 개별 기능 개발 시작 | ⬜ 예정 |
+| Week 3 | TBD | 개별 기능 개발 (STT, TTS, WebSocket 등) | ⬜ 예정 |
 | Week 4 | TBD | 핵심 번역 엔진 구현 | ⬜ 예정 |
 | Week 5 | TBD | 음성 인식 (STT) / 음성 합성 (TTS) | ⬜ 예정 |
 | Week 6 | TBD | 실시간 번역 (WebSocket) | ⬜ 예정 |
@@ -77,12 +77,109 @@
 - 결제 시스템 (유료 회원)
 
 #### 🛠️ 다음 할 일
-- [ ] 프로젝트 폴더 구조 생성 (backend / frontend)
-- [ ] FastAPI 초기 설정 및 Hello World
-- [ ] React + Vite 프로젝트 초기화
-- [ ] PostgreSQL DB 설계 (ERD 작성)
+- [x] 프로젝트 폴더 구조 생성 (backend / frontend)
+- [x] FastAPI 초기 설정 및 Hello World
+- [x] React + Vite 프로젝트 초기화
+- [x] MySQL DB 설계 (DDL 작성)
 - [ ] Docker Compose 구성
 - [ ] .env.example 환경변수 파일 생성
+
+---
+
+### 2026.04.07 (Day 2) — 환경 구축 및 메인 페이지 구현
+
+#### ✅ 완료 항목
+- [x] 프로젝트 폴더 구조 생성 (backend/app, frontend/src 하위 디렉토리)
+- [x] Backend: Python venv 생성, requirements.txt 작성 및 패키지 설치
+- [x] Backend: FastAPI main.py 초기 설정 + CORS 미들웨어
+- [x] Backend: config/ 설정 (settings.py, database.py) — MySQL 연결
+- [x] Frontend: React 19 + Vite + TypeScript + Tailwind CSS 프로젝트 초기화
+- [x] Frontend: 메인 페이지 UI 구현 (Navbar, HomePage, LanguageSelector, TranslateInput, TranslateOutput)
+- [x] Backend: 번역 API 구현 (POST /api/v1/translate, GET /api/v1/translate/history)
+- [x] Backend: OpenAI GPT-4o-mini 기반 번역 서비스 (translate_service.py)
+- [x] Frontend: Axios API 클라이언트 + Vite 프록시 설정 (/api → localhost:8000)
+- [x] Frontend ↔ Backend 실제 API 연동 확인
+- [x] .env 환경변수 설정 (DB, OpenAI API Key)
+
+#### 📌 의사결정 사항
+
+| 결정 사항 | 선택 | 이유 |
+|:---|:---|:---|
+| 데이터베이스 | MySQL (PostgreSQL → 변경) | Durudurub 프로젝트에서 MySQL 사용 경험, 팀 익숙도 |
+| ORM | SQLAlchemy 2.0 | FastAPI 공식 권장, 비동기 지원 |
+| 프론트 빌드 | Vite 8.0 | CRA 대비 10배 빠른 빌드 속도 |
+| 다크 테마 | 기본 다크 + emerald/sky 포인트 | 번역 서비스 특성상 장시간 사용에 적합 |
+
+#### 🛠️ 다음 할 일
+- [ ] MySQL DDL 설계 (테이블 구조 확정)
+- [ ] SQLAlchemy 모델 전체 동기화
+- [ ] Pydantic 스키마 확장
+
+---
+
+### 2026.04.08 (Day 3) — DB 설계 확정 및 모델 동기화
+
+#### ✅ 완료 항목
+- [x] MySQL DDL 설계 — 4개 테이블: translations, exports, rankings, quiz_scores
+- [x] 개별 SQL 파일 생성 (DB/translations.sql, exports.sql, rankings.sql, quiz_scores.sql)
+- [x] 로그인/회원가입 기능 Phase 2로 연기 → users 테이블 제거, user_id FK 전부 삭제
+- [x] rankings, quiz_scores 테이블 → nickname(VARCHAR 50) 기반으로 변경
+- [x] translations 테이블에 input_type, latitude, longitude, country_code 컬럼 추가
+- [x] SQLAlchemy 모델 전체 동기화 완료
+  - Translation 모델: 새 컬럼(input_type, latitude, longitude, country_code) 추가
+  - Export 모델 신규 생성 (models/export.py)
+  - Ranking 모델 신규 생성 (models/ranking.py)
+  - QuizScore 모델 신규 생성 (models/quiz_score.py)
+- [x] models/__init__.py — 4개 모델 전부 임포트 등록
+- [x] Pydantic 스키마 동기화 및 신규 생성
+  - TranslateRequest/TranslationRecord: input_type, latitude, longitude, country_code 추가
+  - ExportRequest/ExportResponse 스키마 생성 (schemas/export.py)
+  - RankingResponse, QuizScoreRequest/QuizScoreResponse 스키마 생성 (schemas/ranking.py)
+- [x] translate_service.py — 새 컬럼(input_type, 위치 정보) 저장 반영
+- [x] main.py — 전체 모델 임포트로 create_all() 반영
+- [x] DB 테이블 자동 생성 테스트 통과 (4개 테이블 확인)
+- [x] README.md 업데이트 (auth 관련 제거, 향후 확장 계획에 Phase 2 회원 시스템 추가)
+
+#### 📌 의사결정 사항
+
+| 결정 사항 | 선택 | 이유 |
+|:---|:---|:---|
+| 회원 시스템 | Phase 2로 연기 | 핵심 번역 기능 우선 개발, 로그인 없이도 서비스 가능 |
+| 사용자 식별 | nickname 기반 | users 테이블 없이 랭킹/퀴즈 점수 관리 가능 |
+| exports FK | translations(id) ON DELETE CASCADE | 번역 삭제 시 관련 내보내기도 자동 삭제 |
+
+#### 🏁 공통 인프라 작업 완료 확인
+
+| 공통 항목 | 상태 |
+|:---|:---:|
+| 프로젝트 폴더 구조 | ✅ |
+| Backend 환경 (venv, FastAPI, Uvicorn) | ✅ |
+| Frontend 환경 (React 19, Vite, TS, Tailwind) | ✅ |
+| .env 환경변수 | ✅ |
+| MySQL DB + DDL (4 테이블) | ✅ |
+| SQLAlchemy 모델 전체 동기화 | ✅ |
+| Pydantic 스키마/DTO 전체 생성 | ✅ |
+| 메인 페이지 UI | ✅ |
+| 번역 API + 프론트 연동 | ✅ |
+| Vite 프록시 설정 | ✅ |
+
+> ✅ **공통 인프라 작업 완료 — 이후 개별 기능 개발 진행**
+
+#### 🛠️ 다음 할 일 (개별 기능 개발)
+
+**최영우 담당**
+- [ ] 음성 인식 (STT) — Whisper/Web Speech API 연동
+- [ ] 위치 기반 번역 — Geolocation API + country_code 매핑
+- [ ] 실시간 번역 — WebSocket 엔드포인트 구현
+- [ ] 내보내기 — PDF(ReportLab) / Word(python-docx) / IMG(Pillow)
+- [ ] 랭킹 시스템 — 랭킹 API + 프론트 UI
+
+**정성준 담당**
+- [ ] 텍스트 번역 고도화 (목적별 프롬프팅)
+- [ ] 번역 내역 조회/관리 UI
+- [ ] TTS (gTTS + Web Speech API)
+- [ ] 학습 카드 UI + 퀴즈 로직
+- [ ] 미니게임 (단어 맞추기, 문장 완성)
 
 ---
 
@@ -94,7 +191,10 @@
 
 | # | 날짜 | 이슈 | 원인 | 해결 방법 | 상태 |
 |:---:|:---:|:---|:---|:---|:---:|
-| - | - | _아직 기록된 이슈 없음_ | - | - | - |
+| 1 | 04.07 | Frontend dev server가 workspace root에서 실행 실패 | Background terminal은 항상 workspace root에서 시작 | `npm --prefix <frontend-path> run dev` 로 실행 | ✅ 해결 |
+| 2 | 04.07 | VS Code에서 TypeScript import 에러 표시 | VS Code 내장 TS(5.x)가 프로젝트 TS 6.0 대신 사용됨 | `.vscode/settings.json`에 `typescript.tsdk` 설정 | ✅ 해결 |
+| 3 | 04.07 | settings.py에서 .env 파일 로드 실패 | `../.env` 상대경로가 background terminal에서 다르게 해석 | `Path(__file__).resolve().parents[3] / ".env"` 절대경로 사용 | ✅ 해결 |
+| 4 | 04.07 | pydantic Settings 초기화 시 extra field 에러 | .env에 REDIS_HOST/PORT 등 Settings에 없는 변수 존재 | `model_config`에 `extra = "ignore"` 추가 | ✅ 해결 |
 
 ---
 
@@ -107,12 +207,25 @@
 ### Backend (Python)
 | 날짜 | 패키지 | 버전 | 변경 유형 | 사유 |
 |:---:|:---|:---:|:---:|:---|
-| 2026.04.06 | _초기 설정 예정_ | - | - | - |
+| 04.07 | fastapi | 0.115.14 | 추가 | 백엔드 웹 프레임워크 |
+| 04.07 | uvicorn | 0.34.3 | 추가 | ASGI 서버 |
+| 04.07 | sqlalchemy | 2.0.49 | 추가 | ORM (MySQL 연동) |
+| 04.07 | pymysql | 1.1.2 | 추가 | MySQL 드라이버 |
+| 04.07 | pydantic-settings | 2.13 | 추가 | 환경변수 관리 |
+| 04.07 | openai | 1.109.1 | 추가 | GPT API 번역 엔진 |
+| 04.07 | python-dotenv | 1.1.1 | 추가 | .env 파일 로드 |
+| 04.07 | passlib | 1.7.4 | 추가 | 비밀번호 해싱 (향후 사용) |
 
 ### Frontend (npm)
 | 날짜 | 패키지 | 버전 | 변경 유형 | 사유 |
 |:---:|:---|:---:|:---:|:---|
-| 2026.04.06 | _초기 설정 예정_ | - | - | - |
+| 04.07 | react | 19.2.4 | 추가 | UI 프레임워크 |
+| 04.07 | vite | 8.0.4 | 추가 | 빌드 도구 |
+| 04.07 | typescript | 6.0.2 | 추가 | 타입 안전성 |
+| 04.07 | tailwindcss | 4.2.2 | 추가 | 유틸리티 CSS |
+| 04.07 | react-router-dom | 7.14.0 | 추가 | 클라이언트 라우팅 |
+| 04.07 | axios | 1.14.0 | 추가 | HTTP 클라이언트 |
+| 04.07 | lucide-react | - | 추가 | 아이콘 라이브러리 |
 
 ---
 
@@ -148,34 +261,5 @@
 
 > 매주 금요일 또는 주말에 작성합니다.
 
-### Week 1 회고 (2026.04.06 ~)
-> 정
+### Week 1 회고 (2026.04.06 ~ 2026.04.10)
 
- - 텍스트 번역
-
- - 번역 내역
-
- - 텍스트 낭독
-
- - 학습 카드
-
- - 미니게임
-
-
-최
-
- - 음성 인식
-
- - 위치 기반
-
- - 실시간 번역
-
- - 내보내기
-
- - 랭킹 시스템
-
-index.html ? ? ? 
-
-(main.tsx) 어케할래
-
-→ 걍 닥치고 클로드한테 """""사이트 레퍼런스로 MUI st, TailwindCSS로 작성해줘

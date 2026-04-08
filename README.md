@@ -1,7 +1,7 @@
 # **프로젝트 : 짭파고 (ZzapPago)** 🌐
 
 <p align="center">
-  <img src="./docs/images/banner.png" width="600" alt="짭파고 대표 이미지">
+  <img src="./docs/images/zzappago.png" width="600" alt="짭파고 대표 이미지">
 </p>
 
 > **특정 목적에 최적화된 프로페셔널 AI 음성 인식 번역 웹 서비스**
@@ -138,14 +138,13 @@ ZzapPago/
 │   │   ├── config/                    ← 설정 (DB, CORS, 환경변수)
 │   │   ├── api/                       ← API 라우터
 │   │   │   ├── v1/
-│   │   │   │   ├── auth.py            ← 인증 (회원가입/로그인/JWT)
 │   │   │   │   ├── translate.py       ← 번역 API
 │   │   │   │   ├── speech.py          ← 음성 인식/합성 API
 │   │   │   │   ├── history.py         ← 번역 내역 API
 │   │   │   │   ├── quiz.py            ← 학습 카드/퀴즈 API
 │   │   │   │   ├── ranking.py         ← 랭킹 API
 │   │   │   │   └── export.py          ← 내보내기 (PDF/Word/IMG) API
-│   │   │   └── deps.py               ← 의존성 주입 (인증 체크 등)
+│   │   │   └── deps.py               ← 의존성 주입
 │   │   ├── models/                    ← SQLAlchemy ORM 모델
 │   │   ├── schemas/                   ← Pydantic 스키마 (DTO)
 │   │   ├── services/                  ← 비즈니스 로직
@@ -153,7 +152,7 @@ ZzapPago/
 │   │   │   ├── speech_service.py      ← STT/TTS 서비스
 │   │   │   ├── export_service.py      ← 파일 생성 서비스
 │   │   │   └── ranking_service.py     ← 랭킹 집계 서비스
-│   │   ├── core/                      ← 핵심 유틸 (JWT, Security)
+│   │   ├── core/                      ← 핵심 유틸
 │   │   └── websocket/                 ← WebSocket 실시간 번역
 │   ├── alembic/                       ← DB 마이그레이션
 │   ├── tests/                         ← 테스트 코드
@@ -224,9 +223,8 @@ ZzapPago/
 │   └── 속도 번역 챌린지
 │
 ├── 👤 마이페이지
-│   ├── 프로필 설정
+│   ├── 닉네임 설정
 │   ├── 언어 설정 / GPS 설정
-│   ├── 구독 관리 (무료/유료)
 │   └── 내보내기 다운로드 내역
 │
 └── ⚙️ 설정
@@ -241,12 +239,10 @@ ZzapPago/
 
 ## 3. 팀 구성 및 역할
 
-> 본인이 맡거나 수행한 역할 하나씩 채우기
-
-| 이름 | 역할 | 담당 업무 |
+| 이름 | 역할 | 담당 기능 |
 |:---:|:---:|:---|
-| **최영우** | FullStack Developer | • 프로젝트 총괄 및 설계 |
-| **정성준** | FullStack Developer | •  |
+| **정성준** | Frontend / Backend | • 텍스트 번역 · 번역 내역 · 텍스트 낭독(TTS)<br>• 학습 카드 · 미니게임 |
+| **최영우** | Frontend / Backend | • 음성 인식(STT) · 위치 기반 · 실시간 번역<br>• 내보내기(PDF/Word/IMG) · 랭킹 시스템 |
 
 > 💡 인원 : **2명** &nbsp;|&nbsp; 기간 : **2026.04 ~**
 
@@ -274,7 +270,6 @@ ZzapPago/
   <img src="https://img.shields.io/badge/Uvicorn-2F6B3D?style=for-the-badge">
   <img src="https://img.shields.io/badge/SQLAlchemy-D71F00?style=for-the-badge&logo=sqlalchemy&logoColor=white">
   <img src="https://img.shields.io/badge/Alembic-6BA81E?style=for-the-badge">
-  <img src="https://img.shields.io/badge/JWT-000000?style=for-the-badge&logo=jsonwebtokens&logoColor=white">
   <img src="https://img.shields.io/badge/WebSocket-010101?style=for-the-badge&logo=socketdotio&logoColor=white">
 </div>
 
@@ -451,5 +446,6 @@ npm run dev
 |:---:|:---|
 | **옵션 1** | MCP 함수 연동 — 번역 통계 및 분석 함수 서버 구축 |
 | **옵션 2** | Flutter 앱 변환 — 모바일 네이티브 앱 배포 |
-| **Phase 2** | 유료 회원 시스템 — 학습 카드, 프리미엄 번역 모델 |
-| **Phase 3** | 랭킹 리워드 — 상위 랭커 혜택 시스템 |
+| **Phase 2** | 회원 시스템 — 회원가입/로그인, 소셜 로그인(Google/Kakao) |
+| **Phase 3** | 유료 회원 시스템 — 학습 카드, 프리미엄 번역 모델 |
+| **Phase 4** | 랭킹 리워드 — 상위 랭커 혜택 시스템 |
