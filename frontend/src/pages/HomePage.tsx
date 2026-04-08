@@ -46,6 +46,11 @@ export default function HomePage() {
 
   return (
     <div className="mx-auto max-w-[960px] px-4 pt-6">
+      {/* 히어로 로고 */}
+      <div className="mb-6 flex flex-col items-center">
+        <img src="/logo.png" alt="짭파고" className="h-28 w-auto" />
+      </div>
+
       {/* 입력 모드 탭 */}
       <div className="mb-4 flex items-center justify-center gap-2">
         {INPUT_TABS.map(({ id, label, icon: Icon }) => (
