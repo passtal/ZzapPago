@@ -9,7 +9,7 @@
 | 주차 | 기간 | 주요 작업 | 상태 |
 |:---:|:---:|:---|:---:|
 | Week 1 | 2026.04.06 ~ 04.10 | 프로젝트 기획 + 환경 구축 + 공통 인프라 | ✅ 완료 |
-| Week 2 | 2026.04.13 ~ | 개별 기능 개발 시작 | ⬜ 예정 |
+| Week 2 | 2026.04.13 ~ 04.16 | 개별 기능 개발 시작 (STT, 학습 카드, UI 개선) | 🔄 진행 중 |
 | Week 3 | TBD | 개별 기능 개발 (STT, TTS, WebSocket 등) | ⬜ 예정 |
 | Week 4 | TBD | 핵심 번역 엔진 구현 | ⬜ 예정 |
 | Week 5 | TBD | 음성 인식 (STT) / 음성 합성 (TTS) | ⬜ 예정 |
@@ -81,8 +81,8 @@
 - [x] FastAPI 초기 설정 및 Hello World
 - [x] React + Vite 프로젝트 초기화
 - [x] MySQL DB 설계 (DDL 작성)
-- [ ] Docker Compose 구성
-- [ ] .env.example 환경변수 파일 생성
+- [x] Docker Compose 구성
+- [x] .env.example 환경변수 파일 생성
 
 ---
 
@@ -111,9 +111,9 @@
 | 다크 테마 | 기본 다크 + emerald/sky 포인트 | 번역 서비스 특성상 장시간 사용에 적합 |
 
 #### 🛠️ 다음 할 일
-- [ ] MySQL DDL 설계 (테이블 구조 확정)
-- [ ] SQLAlchemy 모델 전체 동기화
-- [ ] Pydantic 스키마 확장
+- [x] MySQL DDL 설계 (테이블 구조 확정)
+- [x] SQLAlchemy 모델 전체 동기화
+- [x] Pydantic 스키마 확장
 
 ---
 
@@ -168,18 +168,70 @@
 #### 🛠️ 다음 할 일 (개별 기능 개발)
 
 **최영우 담당**
-- [ ] 음성 인식 (STT) — Whisper/Web Speech API 연동
+- [x] 음성 인식 (STT) — Backend API + Frontend 녹음 UI 구현
 - [ ] 위치 기반 번역 — Geolocation API + country_code 매핑
 - [ ] 실시간 번역 — WebSocket 엔드포인트 구현
 - [ ] 내보내기 — PDF(ReportLab) / Word(python-docx) / IMG(Pillow)
 - [ ] 랭킹 시스템 — 랭킹 API + 프론트 UI
 
 **정성준 담당**
-- [ ] 텍스트 번역 고도화 (목적별 프롬프팅)
-- [ ] 번역 내역 조회/관리 UI
+- [x] 텍스트 번역 고도화 (목적별 프롬프팅)
+- [x] 번역 내역 조회/관리 UI
 - [ ] TTS (gTTS + Web Speech API)
-- [ ] 학습 카드 UI + 퀴즈 로직
+- [x] 학습 카드 UI + 퀴즈 로직
 - [ ] 미니게임 (단어 맞추기, 문장 완성)
+
+---
+
+### 2026.04.16 (Day 4) — STT 음성 인식 구현 + 팀 브랜치 병합
+
+#### ✅ 완료 항목 (최영우)
+- [x] 로고 이미지 적용 — `docs/images/zzappago.png`를 `frontend/public/logo.png`로 배치
+- [x] Navbar 로고: 텍스트만 "짭파고" 스타일로 정리 (이미지 로고는 이질적이라 제거)
+- [x] HomePage 히어로 영역에 앵무새 로고 이미지(112px) 배치
+- [x] Backend STT API 구현
+  - `app/services/stt_service.py` — OpenAI Whisper API 연동 (`whisper-1` 모델)
+  - `app/schemas/stt.py` — STTResponse 스키마
+  - `app/api/v1/stt.py` — `POST /api/v1/stt/` 엔드포인트 (파일 업로드 + 언어 코드)
+  - `main.py`에 stt_router 등록
+- [x] Frontend 음성 입력 기능 구현
+  - `hooks/useVoiceRecorder.ts` — MediaRecorder 기반 마이크 녹음 커스텀 훅 (mimeType 자동 감지)
+  - `api/stt.ts` — STT API 호출 함수 (FormData 멀티파트 업로드)
+  - `components/translate/VoiceInput.tsx` — 녹음 버튼 UI (녹음/중지/처리 상태 표시)
+  - `HomePage.tsx` — 음성 탭 활성화 시 VoiceInput 컴포넌트 표시, 인식 후 자동 번역
+- [x] Vite 서버 `host: true` 설정 — 모바일 테스트용 네트워크 접속 허용
+- [x] `python-multipart` 패키지 추가 — FastAPI 파일 업로드에 필수 의존성
+
+#### ✅ 완료 항목 (정성준 — 병합)
+- [x] 학습 카드 기능 병합
+  - `models/learning_cards.py` — LearningCard 모델
+  - `schemas/learning_card.py` — CRUD 스키마 (Create/Update/Response)
+  - `services/learning_card_service.py` — 학습 카드 서비스 로직
+  - `api/v1/learning_card.py` — GET/POST/PATCH 엔드포인트
+  - `pages/LearningCardsPage.tsx` — 학습 카드 페이지 UI
+- [x] 번역 내역 페이지 고도화 (HistoryPage.tsx)
+- [x] Navbar에 "학습 카드" 메뉴 추가
+- [x] App.tsx 라우트 추가 (`/learning-cards`)
+
+#### 🐛 이슈 발생 & 해결
+- **python-multipart 미설치**: STT API의 `File()`, `Form()` 사용에 필요 → 서버 시작 시 크래시 → `pip install python-multipart`로 해결
+- **로고 이미지 import 경로 에러**: `../../../docs/images/zzappago.png` Vite 루트 밖 → `public/logo.png`로 복사하여 해결
+- **mimeType 호환성**: `"audio/webm; codecs=opus"` 공백 포함 시 일부 브라우저 미지원 → `MediaRecorder.isTypeSupported()` 자동 감지로 변경
+
+#### 📌 의사결정 사항
+
+| 결정 사항 | 선택 | 이유 |
+|:---|:---|:---|
+| STT 엔진 | OpenAI Whisper API (`whisper-1`) | 이미 OpenAI 의존성 있음, 고품질 다국어 STT |
+| 녹음 방식 | MediaRecorder API (브라우저 네이티브) | 별도 라이브러리 불필요, webm/opus 형식 지원 |
+| Navbar 로고 | 텍스트만 "짭파고" | 캐릭터 이미지가 36px 축소 시 이질적, 히어로 영역에서 대형 표시 |
+
+#### 🛠️ 다음 할 일
+- [ ] STT 실제 마이크 테스트 (모바일 환경)
+- [ ] 위치 기반 번역 구현
+- [ ] 실시간 번역 (WebSocket)
+- [ ] 내보내기 기능 (PDF/Word/IMG)
+- [ ] 랭킹 시스템
 
 ---
 
@@ -195,6 +247,9 @@
 | 2 | 04.07 | VS Code에서 TypeScript import 에러 표시 | VS Code 내장 TS(5.x)가 프로젝트 TS 6.0 대신 사용됨 | `.vscode/settings.json`에 `typescript.tsdk` 설정 | ✅ 해결 |
 | 3 | 04.07 | settings.py에서 .env 파일 로드 실패 | `../.env` 상대경로가 background terminal에서 다르게 해석 | `Path(__file__).resolve().parents[3] / ".env"` 절대경로 사용 | ✅ 해결 |
 | 4 | 04.07 | pydantic Settings 초기화 시 extra field 에러 | .env에 REDIS_HOST/PORT 등 Settings에 없는 변수 존재 | `model_config`에 `extra = "ignore"` 추가 | ✅ 해결 |
+| 5 | 04.16 | 백엔드 서버 시작 시 크래시 (RuntimeError) | STT API의 `File()`, `Form()`에 python-multipart 필요 | `pip install python-multipart`, requirements.txt에 추가 | ✅ 해결 |
+| 6 | 04.16 | 로고 이미지 import 실패 (vite:import-analysis) | `../../../docs/images/` 경로가 Vite 루트 밖 | `frontend/public/logo.png`로 복사, 절대 경로 `/logo.png` 사용 | ✅ 해결 |
+| 7 | 04.16 | MediaRecorder mimeType 미지원 에러 | `"audio/webm; codecs=opus"` 공백 포함 시 브라우저 호환 문제 | `MediaRecorder.isTypeSupported()` 로 자동 감지 | ✅ 해결 |
 
 ---
 
@@ -215,6 +270,7 @@
 | 04.07 | openai | 1.109.1 | 추가 | GPT API 번역 엔진 |
 | 04.07 | python-dotenv | 1.1.1 | 추가 | .env 파일 로드 |
 | 04.07 | passlib | 1.7.4 | 추가 | 비밀번호 해싱 (향후 사용) |
+| 04.16 | python-multipart | 0.0.26 | 추가 | FastAPI 파일 업로드 (STT 음성 파일) |
 
 ### Frontend (npm)
 | 날짜 | 패키지 | 버전 | 변경 유형 | 사유 |
