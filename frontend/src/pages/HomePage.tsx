@@ -2,6 +2,7 @@ import { useState } from "react";
 import LanguageSelector from "../components/translate/LanguageSelector";
 import TranslateInput from "../components/translate/TranslateInput";
 import TranslateOutput from "../components/translate/TranslateOutput";
+import VoiceInput from "../components/translate/VoiceInput";
 import { postTranslate } from "../api/translate";
 import { ArrowRightLeft, Type, Mic, FileText, Globe } from "lucide-react";
 
@@ -39,6 +40,23 @@ export default function HomePage() {
       setOutputText(res.translated_text);
     } catch {
       setOutputText("[번역 실패] 서버에 연결할 수 없습니다.");
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
+  const handleTranslateWith = async (text: string) => {
+    if (!text.trim()) return;
+    setIsTranslating(true);
+    try {
+      const res = await postTranslate({
+        source_lang: sourceLang,
+        target_lang: targetLang,
+        text
+      });
+      setOutputText(res.translated_text);
+    } catch (error) {
+      setOutputText("[번역 실패] 서버에 연결할 수 없습니다.")
     } finally {
       setIsTranslating(false);
     }
@@ -100,13 +118,24 @@ export default function HomePage() {
 
         {/* 좌우 번역 패널 */}
         <div className="grid md:grid-cols-2 md:divide-x md:divide-gray-200">
-          <TranslateInput
+          {activeTab === "voice" ? (
+            <VoiceInput 
+              lang={sourceLang}
+              onTranscribed={(text) => {
+                setInputText(text);
+                setActiveTab("text");
+                handleTranslateWith(text);
+              }}
+            />
+          ) : (
+            <TranslateInput
             value={inputText}
             onChange={setInputText}
             onTranslate={handleTranslate}
             isTranslating={isTranslating}
             lang={sourceLang}
-          />
+            />
+          )}
           <TranslateOutput
             value={outputText}
             isTranslating={isTranslating}
