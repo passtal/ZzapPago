@@ -4,6 +4,9 @@ from datetime import datetime
 class LearningCardCreateRequest(BaseModel):
 	translation_id: int = Field(..., examples=[1])
 
+class LearningCardUpdateRequest(BaseModel):
+	is_memorized: bool = Field(..., examples=[True])
+
 class LearningCardResponse(BaseModel):
 	id: int
 	translation_id: int
@@ -13,5 +16,5 @@ class LearningCardResponse(BaseModel):
 	translated_text: str
 	is_memorized: bool
 	created_at: datetime
-
+             
 	model_config = {"from_attributes": True}

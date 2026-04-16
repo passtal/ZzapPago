@@ -5,12 +5,14 @@ import {
   Trophy,
   Gamepad2,
   User,
+  BookOpen,
   Menu,
   X,
 } from "lucide-react";
 const navItems = [
   { path: "/", label: "번역", icon: null },
   { path: "/history", label: "번역 내역", icon: History },
+  { path: "/learning-cards", label: "학습 카드", icon: BookOpen },
   { path: "/ranking", label: "랭킹", icon: Trophy },
   { path: "/game", label: "미니게임", icon: Gamepad2 },
   { path: "/mypage", label: "마이페이지", icon: User },

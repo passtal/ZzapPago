@@ -1,26 +1,19 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.config.database import get_db
-from app.models.learning_cards import LearningCard
-from app.schemas.learning_card import LearningCardResponse, LearningCardCreateRequest
+from app.schemas.learning_card import LearningCardResponse, LearningCardCreateRequest, LearningCardUpdateRequest
+from app.services.learning_card_service import create_learning_card, read_learning_cards, update_learning_card_memorized
 
 router = APIRouter(prefix="/learning-cards", tags=["학습 카드"])
 
 @router.get("/", response_model=list[LearningCardResponse])
 def get_learning_cards(skip: int = 0, limit: int = 20, is_memorized: bool | None = None, db: Session = Depends(get_db)):
-	query = db.query(LearningCard)
-
-	if is_memorized is not None:
-		query = query.filter(LearningCard.is_memorized == is_memorized)
-	
-	rows = (
-		query.order_by(LearningCard.created_at.desc())
-		.offset(skip)
-		.limit(limit)
-		.all()
-	)
-	return rows
+	return read_learning_cards(db, skip, limit, is_memorized)
 
 @router.post("/create", response_model=LearningCardResponse)
-def create_learning_card(req: LearningCardCreateRequest, db: Session = Depends(get_db)):
+def post_learning_card(req: LearningCardCreateRequest, db: Session = Depends(get_db)):
 	return create_learning_card(req, db)
+
+@router.patch("/{card_id}", response_model=LearningCardResponse)
+def patch_learning_card(card_id: int, req: LearningCardUpdateRequest, db: Session = Depends(get_db)):
+	return update_learning_card_memorized(card_id, req.is_memorized, db)

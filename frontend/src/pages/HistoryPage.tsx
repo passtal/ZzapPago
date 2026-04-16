@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { TranslationRecord, getTranslateHistory } from "../api/translate";
 import { getLangLabel } from "../utils/languages";
+import { createLearningCard, readLearningCard } from "../api/learningCard";
 
 const formatDate = (value: string) => {
   return new Intl.DateTimeFormat("ko-KR", {
@@ -74,23 +75,48 @@ export default function HistoryPage() {
   const [activeFilter, setActiveFilter] = useState<
     TranslationRecord["input_type"] | null
   >(null);
+  const [savingCardId, setSavingCardId] = useState<number | null>(null);
+  const [savedCardId, setSavedCardId] = useState<number[]>([]);
+  const [saveError, setSaveError] = useState<{ id: number; message: string } | null>(null);
 
-  const loadHistory = async () => {
-    setLoading(true);
-    setError("");
+  const handleSaveLearningCard = async (record: TranslationRecord) => {
+    setSavingCardId(record.id);
+    setSaveError(null);
 
     try {
-      const data = await getTranslateHistory(0, 20);
-      setRecords(data);
-    } catch {
-      setError("번역 내역을 불러오는 데 실패했습니다.");
+      const data = await createLearningCard({ translation_id: record.id});
+      setSavedCardId((current) => [...current, data.translation_id]);
+    } catch (error) {
+      setSaveError({ id: record.id, message: "학습 카드를 저장하는 데 실패했습니다." });
     } finally {
-      setLoading(false);
+      setSavingCardId(null);
     }
-  };
+
+  }
 
   useEffect(() => {
-    void loadHistory();
+    readLearningCard()
+      .then((data) => {
+        const savedIds = data.map((card) => card.translation_id);
+        setSavedCardId(savedIds);
+      })
+      .catch(() => {
+        console.error("학습 카드 정보를 불러오는 데 실패했습니다.");
+      });
+
+    void (async () => {
+      setLoading(true);
+      setError("");
+
+      try {
+        const data = await getTranslateHistory(0, 20);
+        setRecords(data);
+      } catch {
+        setError("번역 내역을 불러오는 데 실패했습니다.");
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, []);
 
   const filteredRecords = useMemo(() => {
@@ -122,27 +148,8 @@ export default function HistoryPage() {
 
   return (
     <div className="mx-auto max-w-[960px] px-4 pt-6">
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <div>
-          <h1 className="text-[24px] font-semibold text-gray-900">번역 내역</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            최근 번역 기록을 시간순으로 확인하고 필요한 항목만 펼쳐 볼 수 있습니다.
-          </p>
-        </div>
-
-        <button
-          onClick={() => void loadHistory()}
-          disabled={loading}
-          className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
-          title="새로고침"
-        >
-          <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-          새로고침
-        </button>
-      </div>
-
       {!loading && !error && records.length > 0 && (
-        <div className="mb-4 flex flex-wrap items-center gap-2">
+        <div className="mb-4 flex items-center justify-center gap-2">
           {INPUT_TYPE_FILTERS.map((inputType) => {
             const isActive = activeFilter === inputType;
 
@@ -156,7 +163,7 @@ export default function HistoryPage() {
                     current === inputType ? null : inputType
                   );
                 }}
-                className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                className={`flex items-center gap-1.5 rounded-full border px-4 py-2 text-[13px] font-medium transition-all ${
                   isActive
                     ? "border-emerald-500 bg-emerald-50 text-emerald-600"
                     : "border-gray-300 text-gray-500 hover:border-gray-400 hover:text-gray-700"
@@ -262,7 +269,7 @@ export default function HistoryPage() {
                       </button>
 
                       {isExpanded && (
-                        <div className="border-t border-gray-200 bg-gray-50/60 px-5 py-5">
+                        <div className="border-t border-gray-200 bg-white px-5 py-5">
                           <div className="grid gap-4 md:grid-cols-2">
                             <section className="rounded-lg bg-white px-4 py-4">
                               <p className="mb-2 text-xs font-semibold text-gray-500">
@@ -280,6 +287,24 @@ export default function HistoryPage() {
                               <p className="whitespace-pre-wrap text-sm leading-6 text-gray-800">
                                 {record.translated_text}
                               </p>
+                            </section>
+                            <section>
+                              <button
+                                onClick={() => void handleSaveLearningCard(record)}
+                                disabled={savingCardId === record.id || savedCardId.includes(record.id)}
+                                className="mt-2 inline-flex items-center gap-2 rounded-lg bg-emerald-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                {savingCardId === record.id
+                                  ? "저장 중..."
+                                  : savedCardId.includes(record.id)
+                                  ? "저장 완료"
+                                  : "학습 카드로 저장"}
+                              </button>
+                              {saveError && saveError.id === record.id && (
+                                <div className="mt-2 text-sm text-red-600">
+                                  {saveError.message}
+                                </div>
+                              )}
                             </section>
                           </div>
                         </div>

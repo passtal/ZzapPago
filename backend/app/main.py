@@ -1,8 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config.database import engine, Base
-from app.models import Translation, Export, Ranking, QuizScore  # noqa: F401
+from app.models import Translation, Export, Ranking, QuizScore, LearningCard  # noqa: F401
 from app.api.v1.translate import router as translate_router
+from app.api.v1.learning_card import router as learning_card_router
 
 # DB 테이블 자동 생성
 Base.metadata.create_all(bind=engine)
@@ -23,7 +24,7 @@ app.add_middleware(
 
 # 라우터 등록
 app.include_router(translate_router, prefix="/api/v1")
-
+app.include_router(learning_card_router, prefix="/api/v1")
 
 @app.get("/")
 def root():
