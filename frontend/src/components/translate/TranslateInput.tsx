@@ -1,4 +1,4 @@
-import { Volume2, ClipboardList, Mic } from "lucide-react";
+import { Volume2, ClipboardList } from "lucide-react";
 import { getLangLabel } from "../../utils/languages";
 
 const MAX_CHARS = 3000;
