@@ -4,7 +4,6 @@ import {
   ChevronUp,
   Clock3,
   Languages,
-  RefreshCw,
 } from "lucide-react";
 import { TranslationRecord, getTranslateHistory } from "../api/translate";
 import { getLangLabel } from "../utils/languages";

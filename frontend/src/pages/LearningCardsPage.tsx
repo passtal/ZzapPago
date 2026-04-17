@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { BookOpen, CheckCircle2, Languages, RefreshCw } from "lucide-react";
+import { BookOpen, CheckCircle2, Languages } from "lucide-react";
 import {
   LearningCardResponse,
   readLearningCard,
