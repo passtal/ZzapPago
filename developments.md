@@ -9,7 +9,7 @@
 | 주차 | 기간 | 주요 작업 | 상태 |
 |:---:|:---:|:---|:---:|
 | Week 1 | 2026.04.06 ~ 04.10 | 프로젝트 기획 + 환경 구축 + 공통 인프라 | ✅ 완료 |
-| Week 2 | 2026.04.13 ~ 04.16 | 개별 기능 개발 시작 (STT, 학습 카드, UI 개선) | 🔄 진행 중 |
+| Week 2 | 2026.04.13 ~ 04.19 | 개별 기능 개발 시작 (STT, 학습 카드, 미니게임/퀴즈 점수, UI 개선) | 🔄 진행 중 |
 | Week 3 | TBD | 개별 기능 개발 (STT, TTS, WebSocket 등) | ⬜ 예정 |
 | Week 4 | TBD | 핵심 번역 엔진 구현 | ⬜ 예정 |
 | Week 5 | TBD | 음성 인식 (STT) / 음성 합성 (TTS) | ⬜ 예정 |
@@ -235,6 +235,38 @@
 
 ---
 
+### 2026.04.19 (Day 5) — 짝맞추기 미니게임 점수 저장 및 랭킹 연동 기반 구현
+
+#### ✅ 완료 항목 (정성준)
+- [x] 짝맞추기 게임 완료 시 점수 저장 기능 구현
+  - `frontend/src/api/quizScore.ts` — 퀴즈 점수 저장 API 클라이언트 생성
+  - `backend/app/api/v1/quiz_score.py` — `POST /api/v1/quiz-score/create` 엔드포인트 추가
+  - `backend/app/services/quiz_score_service.py` — 점수 저장 서비스 로직 추가
+  - `main.py` — quiz_score_router 등록
+- [x] 짝맞추기 매칭 로직 수정
+  - 기존 `pairId(card.id)` 기준 매칭 → `matchKey(source_lang + source_text)` 기준 매칭으로 변경
+  - 같은 원문/같은 출발어인데 카드 ID가 다른 다국어 번역 카드도 정상 매칭되도록 수정
+  - `matchedPairIds` → `matchedTileIds`로 변경하여 완료 조건을 실제 타일 수 기준으로 계산
+- [x] 게임 완료 결과 모달 개선
+  - 경과 시간, 페널티, 최종 기록 표시 유지
+  - 이번 점수와 최고 점수 표시 추가
+  - 점수 저장 실패 시 화면이 깨지지 않도록 경고 메시지로 처리
+- [x] 퀴즈 점수 최고 기록 저장 방식 구현
+  - `nickname + quiz_type` 기준으로 기존 최고 점수 조회
+  - 새 점수가 기존 최고점보다 높을 때만 기존 row 갱신
+  - 낮거나 같은 점수는 새 기록으로 저장하지 않고 기존 최고 점수 반환
+  - 응답에 `is_new_best`를 추가하여 프론트에서 갱신 여부 표시
+- [x] 랭킹 페이지 연동을 위한 데이터 기준 정리
+  - `quiz_scores`는 플레이 히스토리 테이블이 아니라 게임별 최고 점수 테이블로 사용
+  - 랭킹 담당자는 `quiz_type='match'` 필터 후 `score DESC`, `played_at ASC` 정렬로 활용 가능
+
+#### 🐛 이슈 발생 & 해결
+- **같은 원문 다국어 카드 매칭 실패**: 카드 ID를 정답 기준으로 사용하여 같은 원문이어도 다른 카드로 처리됨 → `source_lang + source_text` 기반 `matchKey`로 비교하여 해결
+- **게임 완료 시 점수 중복 저장**: 매번 완료 기록이 누적되어 랭킹 집계 시 중복 데이터 발생 가능 → 백엔드에서 최고 점수만 저장/갱신하도록 변경
+- **프론트 중복 호출 가능성**: 결과 모달 상태 변화로 저장 API가 반복 호출될 가능성 → `hasSavedScore`와 `useRef` guard로 1회 호출 제한
+
+---
+
 <br>
 
 ## 🐛 이슈 & 해결 로그
@@ -250,6 +282,8 @@
 | 5 | 04.16 | 백엔드 서버 시작 시 크래시 (RuntimeError) | STT API의 `File()`, `Form()`에 python-multipart 필요 | `pip install python-multipart`, requirements.txt에 추가 | ✅ 해결 |
 | 6 | 04.16 | 로고 이미지 import 실패 (vite:import-analysis) | `../../../docs/images/` 경로가 Vite 루트 밖 | `frontend/public/logo.png`로 복사, 절대 경로 `/logo.png` 사용 | ✅ 해결 |
 | 7 | 04.16 | MediaRecorder mimeType 미지원 에러 | `"audio/webm; codecs=opus"` 공백 포함 시 브라우저 호환 문제 | `MediaRecorder.isTypeSupported()` 로 자동 감지 | ✅ 해결 |
+| 8 | 04.19 | 짝맞추기에서 같은 원문 카드가 오답 처리됨 | 카드 ID 기준으로 정답 여부를 비교 | `matchKey(source_lang + source_text)`와 `side` 기준으로 매칭 | ✅ 해결 |
+| 9 | 04.19 | 게임 완료마다 quiz_scores row가 계속 생성됨 | 플레이 기록을 그대로 누적 저장 | `nickname + quiz_type` 기준 최고 점수만 저장/갱신 | ✅ 해결 |
 
 ---
 
@@ -318,4 +352,3 @@
 > 매주 금요일 또는 주말에 작성합니다.
 
 ### Week 1 회고 (2026.04.06 ~ 2026.04.10)
-
