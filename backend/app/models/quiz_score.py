@@ -1,9 +1,12 @@
-from sqlalchemy import Column, Integer, String, DateTime, func
+from sqlalchemy import Column, DateTime, Integer, String, UniqueConstraint, func
 from app.config.database import Base
 
 
 class QuizScore(Base):
     __tablename__ = "quiz_scores"
+    __table_args__ = (
+        UniqueConstraint("nickname", "quiz_type", name="uq_quiz_scores_nickname_quiz_type"),
+    )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     nickname = Column(String(50), nullable=False)

@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Clock3, RotateCcw, ShieldAlert, Sparkles, X } from "lucide-react";
 import { LearningCardResponse } from "../../api/learningCard";
+import { saveBestQuizScore, type QuizScoreResponse } from "../../api/quizScore";
 
 interface MatchGameProps {
 	cards: LearningCardResponse[];
@@ -8,13 +9,16 @@ interface MatchGameProps {
 
 type MatchTile = {
 	id: string;
-	pairId: number;
+	matchKey: string;
 	text: string;
 	side: "question" | "answer";
+	targetLang?: string;
 };
 
 const GAME_PAIR_COUNT = 6;
 const MISMATCH_PENALTY_MS = 1000;
+const MAX_MATCH_SCORE = 100;
+const DEFAULT_SCORE_NICKNAME = "guest";
 
 // 셔플 함수
 function shuffleTiles<T>(items: T[]): T[] {
@@ -35,34 +39,50 @@ function buildMatchTiles(cards: LearningCardResponse[]): MatchTile[] {
   	const tiles = cards.map((card) => [
 		{
 			id: `${card.id}-question`,
-			pairId: card.id,
+			matchKey: `${card.source_lang}:${card.source_text}`,
 			text: card.source_text,
 			side: "question" as const,
 		},
 		{
 			id: `${card.id}-answer`,
-			pairId: card.id,
+			matchKey: `${card.source_lang}:${card.source_text}`,
 			text: card.translated_text,
 			side: "answer" as const,
+			targetLang: card.target_lang,
 		},
     ]).flat();
 
   	return shuffleTiles(tiles);
 }
-
+// 시간 포맷 함수
 const formatSeconds = (value: number) => `${value}초`;
+
+// 점수 계산 함수
+const calculateMatchScore = (elapsedSeconds: number, penaltySeconds: number) => {
+	return Math.max(0, MAX_MATCH_SCORE - elapsedSeconds - penaltySeconds);
+};
+
+// 닉네임을 가져오는 함수
+const getScoreNickname = () => {
+	const savedNickname = window.localStorage.getItem("nickname")?.trim();
+	return savedNickname || DEFAULT_SCORE_NICKNAME;
+};
 
 // 짝맞추기 게임 컴포넌트
 export default function MatchGame({ cards }: MatchGameProps) {
 	const [tiles, setTiles] = useState<MatchTile[]>([]);
 	const [selectedIds, setSelectedIds] = useState<string[]>([]);
-	const [matchedPairIds, setMatchedPairIds] = useState<number[]>([]);
+	const [matchedTileIds, setMatchedTileIds] = useState<string[]>([]);
 	const [locked, setLocked] = useState(false);
 	const [startAt, setStartAt] = useState<number | null>(null);
 	const [endAt, setEndAt] = useState<number | null>(null);
 	const [now, setNow] = useState(Date.now());
 	const [penaltyTime, setPenaltyTime] = useState(0);
 	const [isResultOpen, setIsResultOpen] = useState(false);
+	const [hasSavedScore, setHasSavedScore] = useState(false);
+	const [bestScoreResult, setBestScoreResult] = useState<QuizScoreResponse | null>(null);
+	const [scoreSaveWarning, setScoreSaveWarning] = useState<string | null>(null);
+	const scoreSaveStartedRef = useRef(false);
 
 	// 게임 초기화 함수
 	const resetGame = () => {
@@ -70,33 +90,46 @@ export default function MatchGame({ cards }: MatchGameProps) {
 
 		setTiles(buildMatchTiles(gameCards));
 		setSelectedIds([]);
-		setMatchedPairIds([]);
+		setMatchedTileIds([]);
 		setLocked(false);
 		setStartAt(null);
 		setEndAt(null);
 		setNow(Date.now());
 		setPenaltyTime(0);
 		setIsResultOpen(false);
+		setHasSavedScore(false);
+		setBestScoreResult(null);
+		setScoreSaveWarning(null);
+		scoreSaveStartedRef.current = false;
 	};
 
 	const totalPairCount = useMemo(() => tiles.length / 2, [tiles]);
-	const matchedCount = matchedPairIds.length;
+	const matchedCount = Math.floor(matchedTileIds.length / 2);
 	const progressPercent = totalPairCount === 0 ? 0 : Math.round((matchedCount / totalPairCount) * 100);
 
 	const elapsedTime = startAt === null ? 0 : (endAt ?? now) - startAt;
 	const elapsedSeconds = Math.floor(elapsedTime / 1000);
 	const penaltySeconds = Math.floor(penaltyTime / 1000);
 	const finalSeconds = elapsedSeconds + penaltySeconds;
-	const isFinished = totalPairCount > 0 && matchedPairIds.length === totalPairCount;
+	const matchScore = calculateMatchScore(elapsedSeconds, penaltySeconds);
+	const isFinished = tiles.length > 0 && matchedTileIds.length === tiles.length;
+	const bestScoreText = bestScoreResult ? `${bestScoreResult.score}점` : hasSavedScore ? "확인 중..." : "-";
+	const bestScoreMessage = bestScoreResult
+		? bestScoreResult.is_new_best
+			? "최고 점수를 갱신했습니다."
+			: matchScore === bestScoreResult.score
+				? "기존 최고 점수와 같아 새 기록은 저장하지 않았습니다."
+				: "기존 최고 점수가 더 높아 새 기록은 저장하지 않았습니다."
+		: null;
 
 	const isTileSelected = (tile: MatchTile) => selectedIds.includes(tile.id);
-	const isTileMatched = (tile: MatchTile) => matchedPairIds.includes(tile.pairId);
+	const isTileMatched = (tile: MatchTile) => matchedTileIds.includes(tile.id);
 
 	// 타일 클릭 핸들러
 	const handleTileClick = (tile: MatchTile) => {
 		if (locked) return;
 		if (selectedIds.includes(tile.id)) return;
-		if (matchedPairIds.includes(tile.pairId)) return;
+		if (matchedTileIds.includes(tile.id)) return;
 		if (selectedIds.length === 2) return;
 
 		if (startAt === null) {
@@ -125,10 +158,10 @@ export default function MatchGame({ cards }: MatchGameProps) {
 
 		setLocked(true);
 
-		const isMatch = firstTile.pairId === secondTile.pairId && firstTile.side !== secondTile.side;
+		const isMatch = firstTile.matchKey === secondTile.matchKey && firstTile.side !== secondTile.side;
 
 			if (isMatch) {
-			setMatchedPairIds((prev) => [...prev, firstTile.pairId]);
+			setMatchedTileIds((prev) => [...prev, firstTile.id, secondTile.id]);
 			setSelectedIds([]);
 			setLocked(false);
 			return;
@@ -156,13 +189,33 @@ export default function MatchGame({ cards }: MatchGameProps) {
 
 	// 게임 종료 로직
 	useEffect(() => {
-		if (totalPairCount === 0 || endAt !== null) return;
+		if (tiles.length === 0 || endAt !== null) return;
 
-		if (matchedPairIds.length === totalPairCount) {
+		if (matchedTileIds.length === tiles.length) {
 			setEndAt(Date.now());
 			setIsResultOpen(true);
 		}
-	}, [matchedPairIds, totalPairCount, endAt]);
+	}, [matchedTileIds, tiles, endAt]);
+
+	useEffect(() => {
+		if (!isFinished || endAt === null || hasSavedScore || scoreSaveStartedRef.current) return;
+
+		scoreSaveStartedRef.current = true;
+		setHasSavedScore(true);
+
+		saveBestQuizScore({
+			nickname: getScoreNickname(),
+			quiz_type: "match",
+			score: matchScore,
+		})
+			.then((result) => {
+				setBestScoreResult(result);
+			})
+			.catch((error) => {
+				console.warn("퀴즈 점수 저장에 실패했습니다.", error);
+				setScoreSaveWarning("점수 저장에 실패했습니다. 게임 결과는 계속 확인할 수 있습니다.");
+			});
+	}, [isFinished, endAt, hasSavedScore, matchScore]);
 
 	return (
 		<section className="space-y-3 pb-10 md:space-y-4 md:pb-14">
@@ -250,7 +303,7 @@ export default function MatchGame({ cards }: MatchGameProps) {
 						isMatched ? "border-emerald-500 bg-emerald-50" : isSelected ? "border-blue-400 bg-blue-50" : tile.side === "question" ? "border-gray-200 bg-white hover:border-gray-300" : "border-purple-200 bg-purple-50/50 hover:border-purple-300"}`
 					}>
 					<p className="mb-3 text-[11px] font-semibold text-gray-500">
-						{tile.side === "question" ? "원문" : "번역"}
+						{tile.side === "question" ? "원문" : `번역${tile.targetLang ? ` (${tile.targetLang})` : ""}`}
 					</p>
 					<p className="break-words text-sm leading-6 text-gray-800">
 						{tile.text}
@@ -302,6 +355,31 @@ export default function MatchGame({ cards }: MatchGameProps) {
 							{formatSeconds(finalSeconds)}
 							</p>
 						</div>
+						<div className="grid gap-3 sm:grid-cols-2">
+							<div className="rounded-xl bg-blue-50 px-4 py-4">
+								<p className="text-xs font-medium text-blue-700">이번 점수</p>
+								<p className="mt-1 text-xl font-semibold text-gray-900">
+									{`${matchScore}점`}
+								</p>
+							</div>
+
+							<div className="rounded-xl bg-gray-50 px-4 py-4">
+								<p className="text-xs font-medium text-gray-500">최고 점수</p>
+								<p className="mt-1 text-xl font-semibold text-gray-900">
+									{bestScoreText}
+								</p>
+							</div>
+						</div>
+						{bestScoreMessage && (
+							<p className="rounded-lg bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700">
+								{bestScoreMessage}
+							</p>
+						)}
+						{scoreSaveWarning && (
+							<p className="rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700">
+								{scoreSaveWarning}
+							</p>
+						)}
 						</div>
 
 						<div className="flex items-center justify-end gap-2 border-t border-gray-200 px-5 py-4">

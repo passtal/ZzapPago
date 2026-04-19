@@ -5,6 +5,7 @@ from app.models import Translation, Export, Ranking, QuizScore, LearningCard  # 
 from app.api.v1.translate import router as translate_router
 from app.api.v1.stt import router as stt_router
 from app.api.v1.learning_card import router as learning_card_router
+from app.api.v1.quiz_score import router as quiz_score_router
 
 # DB 테이블 자동 생성
 Base.metadata.create_all(bind=engine)
@@ -27,7 +28,7 @@ app.add_middleware(
 app.include_router(translate_router, prefix="/api/v1")
 app.include_router(learning_card_router, prefix="/api/v1")
 app.include_router(stt_router, prefix="/api/v1")
-
+app.include_router(quiz_score_router, prefix="/api/v1")
 
 @app.get("/")
 def root():

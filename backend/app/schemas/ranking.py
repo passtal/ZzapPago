@@ -25,5 +25,6 @@ class QuizScoreResponse(BaseModel):
     quiz_type: str
     score: int
     played_at: datetime
+    is_new_best: bool = False
 
     model_config = {"from_attributes": True}
