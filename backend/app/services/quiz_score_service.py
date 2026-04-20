@@ -2,6 +2,7 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 from app.models import QuizScore
 from app.schemas.ranking import QuizScoreRequest
+from app.services.ranking_service import update_ranking_quiz_score
 
 
 def create_quiz_score(req: QuizScoreRequest, db: Session):
@@ -38,6 +39,10 @@ def create_quiz_score(req: QuizScoreRequest, db: Session):
 
     db.commit()
     db.refresh(quiz_score)
+
+    # 랭킹 자동 갱신
+    update_ranking_quiz_score(req.nickname, db)
+
     return {
         "id": quiz_score.id,
         "nickname": quiz_score.nickname,

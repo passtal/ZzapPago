@@ -4,10 +4,12 @@ import {
   ChevronUp,
   Clock3,
   Languages,
+  FileDown,
 } from "lucide-react";
 import { TranslationRecord, getTranslateHistory } from "../api/translate";
 import { getLangLabel } from "../utils/languages";
 import { createLearningCard, readLearningCard } from "../api/learningCard";
+import { createExport, getExportDownloadUrl } from "../api/export";
 
 const formatDate = (value: string) => {
   return new Intl.DateTimeFormat("ko-KR", {
@@ -77,6 +79,27 @@ export default function HistoryPage() {
   const [savingCardId, setSavingCardId] = useState<number | null>(null);
   const [savedCardId, setSavedCardId] = useState<number[]>([]);
   const [saveError, setSaveError] = useState<{ id: number; message: string } | null>(null);
+  const [exportingId, setExportingId] = useState<string | null>(null);
+
+  const handleExport = async (translationId: number, format: "pdf" | "word" | "img") => {
+    const key = `${translationId}-${format}`;
+    setExportingId(key);
+    try {
+      const result = await createExport({ translation_id: translationId, format });
+      // 다운로드 트리거
+      const url = getExportDownloadUrl(result.id);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch {
+      alert("내보내기에 실패했습니다.");
+    } finally {
+      setExportingId(null);
+    }
+  };
 
   const handleSaveLearningCard = async (record: TranslationRecord) => {
     setSavingCardId(record.id);
@@ -304,6 +327,21 @@ export default function HistoryPage() {
                                   {saveError.message}
                                 </div>
                               )}
+                            </section>
+
+                            {/* 내보내기 버튼 */}
+                            <section className="flex items-center gap-2">
+                              {(["pdf", "word", "img"] as const).map((fmt) => (
+                                <button
+                                  key={fmt}
+                                  onClick={() => void handleExport(record.id, fmt)}
+                                  disabled={exportingId === `${record.id}-${fmt}`}
+                                  className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-xs font-medium text-gray-600 transition-colors hover:border-emerald-400 hover:bg-emerald-50 hover:text-emerald-600 disabled:opacity-50"
+                                >
+                                  <FileDown className="h-3.5 w-3.5" />
+                                  {exportingId === `${record.id}-${fmt}` ? "..." : fmt.toUpperCase()}
+                                </button>
+                              ))}
                             </section>
                           </div>
                         </div>

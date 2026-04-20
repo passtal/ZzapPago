@@ -4,10 +4,13 @@ import TranslateInput from "../components/translate/TranslateInput";
 import TranslateOutput from "../components/translate/TranslateOutput";
 import VoiceInput from "../components/translate/VoiceInput";
 import { postTranslate } from "../api/translate";
-import { ArrowRightLeft, Type, Mic, FileText, Globe } from "lucide-react";
+import useRealtimeTranslate from "../hooks/useRealtimeTranslate";
+import useGeoLocation from "../hooks/useGeoLocation";
+import { ArrowRightLeft, Type, Mic, FileText, Globe, Zap, MapPin } from "lucide-react";
 
 const INPUT_TABS = [
   { id: "text", label: "텍스트", icon: Type },
+  { id: "realtime", label: "실시간", icon: Zap },
   { id: "voice", label: "음성", icon: Mic },
   { id: "document", label: "문서", icon: FileText },
   { id: "website", label: "웹사이트", icon: Globe },
@@ -20,6 +23,21 @@ export default function HomePage() {
   const [outputText, setOutputText] = useState("");
   const [isTranslating, setIsTranslating] = useState(false);
   const [activeTab, setActiveTab] = useState<string>("text");
+
+  const { translatedText: realtimeOutput, isConnected, sendText } = useRealtimeTranslate({
+    sourceLang,
+    targetLang,
+  });
+
+  const { location: geoLocation, loading: geoLoading, error: geoError, detectLocation } = useGeoLocation();
+
+  const handleDetectLocation = async () => {
+    const result = await detectLocation();
+    if (result?.langCode) {
+      // 감지된 언어를 출발어로 설정
+      setSourceLang(result.langCode);
+    }
+  };
 
   const handleSwapLangs = () => {
     setSourceLang(targetLang);
@@ -36,6 +54,9 @@ export default function HomePage() {
         source_lang: sourceLang,
         target_lang: targetLang,
         text: inputText,
+        latitude: geoLocation?.latitude,
+        longitude: geoLocation?.longitude,
+        country_code: geoLocation?.countryCode,
       });
       setOutputText(res.translated_text);
     } catch {
@@ -52,7 +73,10 @@ export default function HomePage() {
       const res = await postTranslate({
         source_lang: sourceLang,
         target_lang: targetLang,
-        text
+        text,
+        latitude: geoLocation?.latitude,
+        longitude: geoLocation?.longitude,
+        country_code: geoLocation?.countryCode,
       });
       setOutputText(res.translated_text);
     } catch (error) {
@@ -97,6 +121,15 @@ export default function HomePage() {
               onChange={setSourceLang}
               label="출발어"
             />
+            <button
+              onClick={handleDetectLocation}
+              disabled={geoLoading}
+              className="ml-2 flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs text-gray-400 transition-colors hover:bg-gray-100 hover:text-emerald-500 disabled:opacity-50"
+              title="위치 기반 언어 감지"
+            >
+              <MapPin className={`h-3.5 w-3.5 ${geoLoading ? "animate-pulse" : ""} ${geoLocation ? "text-emerald-500" : ""}`} />
+              {geoLoading ? "감지 중..." : geoLocation?.countryCode ?? "위치 감지"}
+            </button>
           </div>
 
           <button
@@ -127,20 +160,51 @@ export default function HomePage() {
                 handleTranslateWith(text);
               }}
             />
+          ) : activeTab === "realtime" ? (
+            <>
+              <div className="flex flex-col">
+                <div className="relative min-h-[220px] p-5">
+                  <div className="mb-2 flex items-center gap-2">
+                    <span className={`inline-block h-2 w-2 rounded-full ${isConnected ? "bg-emerald-500" : "bg-red-400"}`} />
+                    <span className="text-xs text-gray-400">
+                      {isConnected ? "실시간 연결됨" : "연결 끊김"}
+                    </span>
+                  </div>
+                  <textarea
+                    value={inputText}
+                    onChange={(e) => {
+                      setInputText(e.target.value);
+                      sendText(e.target.value);
+                    }}
+                    placeholder="입력하면 실시간으로 번역됩니다"
+                    rows={7}
+                    maxLength={3000}
+                    className="w-full resize-none bg-transparent text-[17px] leading-relaxed text-gray-800 placeholder-gray-400 focus:outline-none"
+                  />
+                </div>
+              </div>
+              <TranslateOutput
+                value={realtimeOutput}
+                isTranslating={false}
+                lang={targetLang}
+              />
+            </>
           ) : (
-            <TranslateInput
-            value={inputText}
-            onChange={setInputText}
-            onTranslate={handleTranslate}
-            isTranslating={isTranslating}
-            lang={sourceLang}
-            />
+            <>
+              <TranslateInput
+                value={inputText}
+                onChange={setInputText}
+                onTranslate={handleTranslate}
+                isTranslating={isTranslating}
+                lang={sourceLang}
+              />
+              <TranslateOutput
+                value={outputText}
+                isTranslating={isTranslating}
+                lang={targetLang}
+              />
+            </>
           )}
-          <TranslateOutput
-            value={outputText}
-            isTranslating={isTranslating}
-            lang={targetLang}
-          />
         </div>
       </div>
     </div>

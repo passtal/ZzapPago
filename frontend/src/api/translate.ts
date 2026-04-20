@@ -9,6 +9,9 @@ export interface TranslateRequest {
   source_lang: string;
   target_lang: string;
   text: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  country_code?: string | null;
 }
 
 export interface TranslateResponse {
