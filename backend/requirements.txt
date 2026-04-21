@@ -15,6 +15,11 @@ passlib[bcrypt]==1.7.*
 # AI / Translation
 openai==1.*
 
+# Export (PDF / Word / IMG)
+reportlab==4.*
+python-docx==1.*
+Pillow==11.*
+
 # Environment
 python-dotenv==1.1.*
 pydantic-settings==2.*

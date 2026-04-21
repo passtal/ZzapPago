@@ -9,15 +9,9 @@
 | 주차 | 기간 | 주요 작업 | 상태 |
 |:---:|:---:|:---|:---:|
 | Week 1 | 2026.04.06 ~ 04.10 | 프로젝트 기획 + 환경 구축 + 공통 인프라 | ✅ 완료 |
-| Week 2 | 2026.04.13 ~ 04.19 | 개별 기능 개발 시작 (STT, 학습 카드, 미니게임/퀴즈 점수, UI 개선) | 🔄 진행 중 |
-| Week 3 | TBD | 개별 기능 개발 (STT, TTS, WebSocket 등) | ⬜ 예정 |
-| Week 4 | TBD | 핵심 번역 엔진 구현 | ⬜ 예정 |
-| Week 5 | TBD | 음성 인식 (STT) / 음성 합성 (TTS) | ⬜ 예정 |
-| Week 6 | TBD | 실시간 번역 (WebSocket) | ⬜ 예정 |
-| Week 7 | TBD | 번역 내역 / 내보내기 기능 | ⬜ 예정 |
-| Week 8 | TBD | 학습 카드 / 퀴즈 / 미니게임 | ⬜ 예정 |
-| Week 9 | TBD | 랭킹 시스템 / 유료 회원 기능 | ⬜ 예정 |
-| Week 10 | TBD | UI 완성 / 테스트 / 배포 | ⬜ 예정 |
+| Week 2 | 2026.04.13 ~ 04.20 | 개별 기능 개발 (STT, 미니게임, 학습 카드, 퀴즈 점수, 랭킹, 실시간 번역, 위치 기반 번역, 내보내기) | ✅ 완료 |
+| Week 3 | TBD | TTS, 암기 판별 게임 완성, 통합 테스트 | ⬜ 예정 |
+| Week 4 | TBD | UI 완성 / 테스트 / 배포 | ⬜ 예정 |
 
 ---
 
@@ -179,7 +173,7 @@
 - [x] 번역 내역 조회/관리 UI
 - [ ] TTS (gTTS + Web Speech API)
 - [x] 학습 카드 UI + 퀴즈 로직
-- [ ] 미니게임 (단어 맞추기, 문장 완성)
+- [x] 미니게임 — 짝맞추기 완성, 암기 판별 작성 중
 
 ---
 
@@ -235,35 +229,187 @@
 
 ---
 
-### 2026.04.19 (Day 5) — 짝맞추기 미니게임 점수 저장 및 랭킹 연동 기반 구현
+### 2026.04.16 ~ 04.20 (Day 5~6) — 미니게임 + 퀴즈 점수 + UI 리팩토링 (정성준)
 
 #### ✅ 완료 항목 (정성준)
-- [x] 짝맞추기 게임 완료 시 점수 저장 기능 구현
-  - `frontend/src/api/quizScore.ts` — 퀴즈 점수 저장 API 클라이언트 생성
-  - `backend/app/api/v1/quiz_score.py` — `POST /api/v1/quiz-score/create` 엔드포인트 추가
-  - `backend/app/services/quiz_score_service.py` — 점수 저장 서비스 로직 추가
-  - `main.py` — quiz_score_router 등록
-- [x] 짝맞추기 매칭 로직 수정
-  - 기존 `pairId(card.id)` 기준 매칭 → `matchKey(source_lang + source_text)` 기준 매칭으로 변경
-  - 같은 원문/같은 출발어인데 카드 ID가 다른 다국어 번역 카드도 정상 매칭되도록 수정
-  - `matchedPairIds` → `matchedTileIds`로 변경하여 완료 조건을 실제 타일 수 기준으로 계산
-- [x] 게임 완료 결과 모달 개선
-  - 경과 시간, 페널티, 최종 기록 표시 유지
-  - 이번 점수와 최고 점수 표시 추가
-  - 점수 저장 실패 시 화면이 깨지지 않도록 경고 메시지로 처리
-- [x] 퀴즈 점수 최고 기록 저장 방식 구현
-  - `nickname + quiz_type` 기준으로 기존 최고 점수 조회
-  - 새 점수가 기존 최고점보다 높을 때만 기존 row 갱신
-  - 낮거나 같은 점수는 새 기록으로 저장하지 않고 기존 최고 점수 반환
-  - 응답에 `is_new_best`를 추가하여 프론트에서 갱신 여부 표시
-- [x] 랭킹 페이지 연동을 위한 데이터 기준 정리
-  - `quiz_scores`는 플레이 히스토리 테이블이 아니라 게임별 최고 점수 테이블로 사용
-  - 랭킹 담당자는 `quiz_type='match'` 필터 후 `score DESC`, `played_at ASC` 정렬로 활용 가능
+- [x] 미니게임 페이지 구현 (GamePage.tsx)
+  - "짝맞추기" / "암기 판별" 두 가지 게임 모드 탭 UI
+  - 학습 카드 데이터 기반 게임 카드 로드
+- [x] 짝맞추기 게임 구현 (MatchGame.tsx)
+  - 학습 카드 6쌍(12타일) 셔플 → 원문/번역 짝 맞추기
+  - 타이머(경과 시간) + 틀림 페널티(+1초) + 점수 계산(100 - 경과 - 페널티)
+  - 진행률 프로그레스 바 (진행 n/6, n%)
+  - 게임 완료 시 결과 모달 (경과 시간, 페널티, 최종 기록, 점수, 최고 점수)
+  - 점수 자동 저장 (quiz_scores 테이블) + 최고 점수 갱신 로직
+  - "다시 섞기" 버튼으로 게임 리셋
+- [x] 암기 판별 게임 (SwipeGame.tsx) — 스켈레톤 생성 (작성 중)
+- [x] 퀴즈 점수 Backend API 구현
+  - `app/api/v1/quiz_score.py` — `POST /api/v1/quiz-score/create` 엔드포인트
+  - `app/services/quiz_score_service.py` — 점수 저장/갱신 서비스 (기존 최고 점수보다 높을 때만 업데이트)
+  - `app/schemas/ranking.py` — QuizScoreRequest/QuizScoreResponse 스키마
+  - `main.py`에 quiz_score_router 등록
+- [x] QuizScore 모델에 UniqueConstraint 추가 (nickname + quiz_type 복합 유니크)
+- [x] Frontend API 클라이언트 추가
+  - `api/quizScore.ts` — `saveBestQuizScore()` 함수
+  - `api/learningCard.ts` — CRUD API 클라이언트 (create/read/update)
+- [x] App.tsx 라우트 추가 (`/game` → GamePage)
+- [x] Navbar에 "미니게임" 메뉴 추가 (Gamepad2 아이콘)
+- [x] UI 리팩토링
+  - `MainLayout.tsx` — 공통 레이아웃 (Navbar + Outlet) 분리
+  - `ParrotLogo.tsx` — SVG 앵무새 로고 컴포넌트 생성
+  - `utils/languages.ts` — 언어 코드/라벨 유틸리티 (LANGUAGES, getLangLabel)
+  - Navbar 모바일 대응 (햄버거 메뉴 + 드롭다운)
+- [x] 번역 내역 페이지 고도화 (HistoryPage.tsx)
+  - input_type별 필터 (텍스트/음성/문서/웹사이트)
+  - 날짜별 그룹핑 (오늘/어제/yyyy년 m월 d일)
+  - 접기/펼치기 아코디언 UI
+  - "학습 카드로 저장" 버튼 (중복 저장 방지)
+- [x] 학습 카드 페이지 고도화 (LearningCardsPage.tsx)
+  - 암기 전/암기 완료 필터
+  - 암기 상태 토글 버튼
+  - 암기 완료 카운터 (n/전체)
 
-#### 🐛 이슈 발생 & 해결
-- **같은 원문 다국어 카드 매칭 실패**: 카드 ID를 정답 기준으로 사용하여 같은 원문이어도 다른 카드로 처리됨 → `source_lang + source_text` 기반 `matchKey`로 비교하여 해결
-- **게임 완료 시 점수 중복 저장**: 매번 완료 기록이 누적되어 랭킹 집계 시 중복 데이터 발생 가능 → 백엔드에서 최고 점수만 저장/갱신하도록 변경
-- **프론트 중복 호출 가능성**: 결과 모달 상태 변화로 저장 API가 반복 호출될 가능성 → `hasSavedScore`와 `useRef` guard로 1회 호출 제한
+#### 📌 의사결정 사항
+
+| 결정 사항 | 선택 | 이유 |
+|:---|:---|:---|
+| 퀴즈 점수 저장 방식 | nickname+quiz_type 유니크 (최고 점수만 유지) | 랭킹 집계 용이, 불필요한 레코드 방지 |
+| 게임 점수 계산 | 100 - 경과시간(초) - 페널티(초) | 빨리 + 정확하게 맞출수록 높은 점수 |
+| 레이아웃 분리 | MainLayout + Outlet | 공통 Navbar 중복 제거, 라우트 구조 개선 |
+
+#### 🛠️ 다음 할 일
+
+**최영우 담당**
+- [x] 랭킹 시스템 — 랭킹 API + 프론트 UI ✅ (04.20)
+- [x] 실시간 번역 — WebSocket 엔드포인트 구현 ✅ (04.20)
+- [x] 위치 기반 번역 — Geolocation API + country_code 매핑 ✅ (04.20)
+- [x] 내보내기 — PDF(ReportLab) / Word(python-docx) / IMG(Pillow) ✅ (04.20)
+
+**정성준 담당**
+- [ ] TTS (gTTS + Web Speech API)
+- [ ] SwipeGame (암기 판별 게임) 완성
+
+---
+
+### 2026.04.20 (Day 7) — 랭킹 + 실시간 번역 + 위치 기반 번역 + 내보내기 구현 (최영우)
+
+#### ✅ 완료 항목
+
+**1. 랭킹 시스템**
+- [x] Backend 랭킹 서비스 구현 (`services/ranking_service.py`)
+  - `get_rankings()` — total_score 기준 TOP N 랭킹 조회
+  - `refresh_ranking()` — 닉네임 기준 전체 점수 재계산
+  - `update_ranking_translate_count()` — 번역 횟수 +1 증가
+  - `update_ranking_quiz_score()` — quiz_scores 테이블에서 합계 재계산
+  - Ranking 레코드 미존재 시 자동 생성
+- [x] Backend 랭킹 API (`api/v1/ranking.py`)
+  - `GET /api/v1/rankings/` — 랭킹 목록 조회 (limit 파라미터)
+  - `POST /api/v1/rankings/translate/{nickname}` — 번역 횟수 업데이트
+  - `POST /api/v1/rankings/quiz/{nickname}` — 퀴즈 점수 재계산
+- [x] 퀴즈 점수 저장 시 랭킹 자동 갱신 연동 (`quiz_score_service.py` 수정)
+- [x] Frontend 랭킹 API 클라이언트 (`api/ranking.ts`)
+- [x] Frontend 랭킹 페이지 (`pages/RankingPage.tsx`)
+  - TOP 3 하이라이트 카드 (🥇🥈🥉 + 총점/번역횟수/퀴즈점수)
+  - 전체 랭킹 테이블 (순위/닉네임/점수 컬럼)
+- [x] App.tsx 라우트 추가 (`/ranking` → RankingPage)
+
+**2. 실시간 번역 (WebSocket)**
+- [x] Backend WebSocket 핸들러 (`websocket/realtime_translate.py`)
+  - JSON 수신 `{ text, source_lang, target_lang }` → GPT-4o-mini 번역 → JSON 응답
+  - WebSocketDisconnect 예외 처리
+- [x] main.py에 WebSocket 엔드포인트 등록 (`/ws/translate`)
+- [x] Frontend WebSocket 커스텀 훅 (`hooks/useRealtimeTranslate.ts`)
+  - `ws://host/ws/translate` 자동 연결/재연결
+  - 500ms 디바운스로 입력 최적화
+  - `{ translatedText, isConnected, sendText }` 반환
+- [x] HomePage에 "실시간" 탭 추가 (Zap 아이콘)
+  - 연결 상태 인디케이터 (초록/빨강 점)
+  - 실시간 입력 textarea + 번역 결과 표시
+- [x] Vite 프록시에 `/ws` WebSocket 프록시 추가 (`ws: true`)
+
+**3. 위치 기반 번역 (GPS Geolocation)**
+- [x] Frontend Geolocation 커스텀 훅 (`hooks/useGeoLocation.ts`)
+  - 브라우저 Geolocation API로 GPS 좌표(위도/경도) 획득
+  - OpenStreetMap Nominatim 역지오코딩으로 국가 코드 파악 (무료 API)
+  - 국가 코드 → 언어 코드 자동 매핑 (26개국 지원: KR→ko, US→en, JP→ja 등)
+  - 에러 핸들링 (권한 거부, 위치 불가, 타임아웃)
+- [x] HomePage 언어 선택 바에 위치 감지 버튼 추가 (MapPin 아이콘)
+  - 클릭 시 GPS 좌표 획득 → 국가 코드 감지 → 출발어 자동 설정
+  - 감지 중 로딩 애니메이션 + 감지 완료 시 국가 코드 표시
+- [x] 번역 요청 시 위치 정보(latitude, longitude, country_code) 함께 전송
+- [x] Frontend TranslateRequest 타입에 위치 필드 추가 (`api/translate.ts`)
+- [x] Backend는 기존에 이미 지원 (TranslateRequest 스키마 + translate_service.py에서 DB 저장)
+
+**4. 내보내기 (PDF / Word / IMG)**
+- [x] Backend 내보내기 서비스 (`services/export_service.py`)
+  - `export_as_pdf()` — ReportLab 기반 PDF 생성 (한글 폰트 자동 감지, A4 레이아웃)
+  - `export_as_word()` — python-docx 기반 Word 문서 생성 (제목/원문/번역문 섹션)
+  - `export_as_img()` — Pillow 기반 PNG 이미지 생성 (짭파고 브랜딩 헤더, #1ec800 포인트컬러)
+  - 파일 저장 경로: `backend/exports/` 디렉토리 자동 생성
+- [x] Backend 내보내기 API (`api/v1/export.py`)
+  - `POST /api/v1/exports/` — 내보내기 생성 (translation_id + format)
+  - `GET /api/v1/exports/download/{export_id}` — 파일 다운로드 (FileResponse)
+- [x] main.py에 export_router 등록
+- [x] Frontend 내보내기 API 클라이언트 (`api/export.ts`)
+  - `createExport()` — 내보내기 생성 요청
+  - `getExportDownloadUrl()` — 다운로드 URL 생성
+- [x] HistoryPage에 내보내기 버튼 추가
+  - 번역 기록 펼침 영역에 PDF / WORD / IMG 버튼 3개
+  - 클릭 시 파일 생성 + 자동 다운로드 트리거
+  - 로딩 상태 표시 (버튼별 개별 로딩)
+- [x] requirements.txt에 내보내기 패키지 추가 (reportlab, python-docx, Pillow)
+
+#### 📌 의사결정 사항
+
+| 결정 사항 | 선택 | 이유 |
+|:---|:---|:---|
+| 랭킹 점수 계산 | total_score = translate_count + quiz_score | 번역 사용량 + 학습 성과 모두 반영 |
+| 실시간 번역 방식 | FastAPI native WebSocket + GPT-4o-mini | 추가 라이브러리 불필요, 기존 인프라 활용 |
+| 디바운스 시간 | 500ms | 너무 잦은 API 호출 방지 + 체감 지연 최소화 |
+| 역지오코딩 API | OpenStreetMap Nominatim | 무료, API 키 불필요, 정확도 충분 |
+| 위치 감지 UI | 출발어 옆 작은 버튼 | 자동 실행이 아닌 사용자 주도 감지 (권한 요청 UX 고려) |
+| 내보내기 파일 저장 | 서버 로컬 `backend/exports/` | 간단한 구현, 추후 클라우드 스토리지로 확장 가능 |
+| PDF 한글 폰트 | Windows malgun.ttf / Linux NanumGothic 자동 감지 | OS별 호환성 확보 |
+
+#### 📂 생성/수정된 파일 목록
+
+| 파일 | 유형 | 설명 |
+|:---|:---:|:---|
+| `backend/app/services/ranking_service.py` | 신규 | 랭킹 비즈니스 로직 |
+| `backend/app/api/v1/ranking.py` | 신규 | 랭킹 API 엔드포인트 |
+| `backend/app/websocket/realtime_translate.py` | 신규 | WebSocket 실시간 번역 핸들러 |
+| `backend/app/services/export_service.py` | 신규 | 내보내기 서비스 (PDF/Word/IMG) |
+| `backend/app/api/v1/export.py` | 신규 | 내보내기 API 엔드포인트 |
+| `backend/app/main.py` | 수정 | ranking/export 라우터 + WebSocket 엔드포인트 등록 |
+| `backend/app/services/quiz_score_service.py` | 수정 | 퀴즈 저장 시 랭킹 자동 갱신 추가 |
+| `backend/requirements.txt` | 수정 | reportlab, python-docx, Pillow 추가 |
+| `frontend/src/hooks/useRealtimeTranslate.ts` | 신규 | WebSocket 실시간 번역 훅 |
+| `frontend/src/hooks/useGeoLocation.ts` | 신규 | GPS 위치 감지 + 역지오코딩 훅 |
+| `frontend/src/api/ranking.ts` | 신규 | 랭킹 API 클라이언트 |
+| `frontend/src/api/export.ts` | 신규 | 내보내기 API 클라이언트 |
+| `frontend/src/pages/RankingPage.tsx` | 신규 | 랭킹 페이지 UI |
+| `frontend/src/pages/HomePage.tsx` | 수정 | 실시간 탭 + 위치 감지 버튼 추가 |
+| `frontend/src/pages/HistoryPage.tsx` | 수정 | 내보내기 버튼 (PDF/WORD/IMG) 추가 |
+| `frontend/src/api/translate.ts` | 수정 | TranslateRequest에 위치 필드 추가 |
+| `frontend/src/App.tsx` | 수정 | /ranking 라우트 추가 |
+| `frontend/vite.config.ts` | 수정 | /ws WebSocket 프록시 추가 |
+
+#### 🛠️ 다음 할 일
+
+**최영우 담당** — ✅ 전체 완료
+- [x] 랭킹 시스템
+- [x] 실시간 번역 (WebSocket)
+- [x] 위치 기반 번역 (GPS)
+- [x] 내보내기 (PDF/Word/IMG)
+
+**정성준 담당**
+- [ ] TTS (gTTS + Web Speech API)
+- [ ] SwipeGame (암기 판별 게임) 완성
+
+**공통**
+- [ ] 통합 테스트 (전체 기능 동작 확인)
+- [ ] Docker Compose 빌드 테스트
+- [ ] UI 최종 점검
 
 ---
 
@@ -305,6 +451,9 @@
 | 04.07 | python-dotenv | 1.1.1 | 추가 | .env 파일 로드 |
 | 04.07 | passlib | 1.7.4 | 추가 | 비밀번호 해싱 (향후 사용) |
 | 04.16 | python-multipart | 0.0.26 | 추가 | FastAPI 파일 업로드 (STT 음성 파일) |
+| 04.20 | reportlab | 4.* | 추가 | PDF 내보내기 생성 |
+| 04.20 | python-docx | 1.* | 추가 | Word(docx) 내보내기 생성 |
+| 04.20 | Pillow | 11.* | 추가 | 이미지(PNG) 내보내기 생성 |
 
 ### Frontend (npm)
 | 날짜 | 패키지 | 버전 | 변경 유형 | 사유 |
@@ -352,3 +501,4 @@
 > 매주 금요일 또는 주말에 작성합니다.
 
 ### Week 1 회고 (2026.04.06 ~ 2026.04.10)
+
