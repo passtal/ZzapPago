@@ -1,6 +1,7 @@
-import { Copy, Volume2, Star, Share2 } from "lucide-react";
-import { getLangLabel } from "../../utils/languages";
+import { Copy, LoaderCircle, Share2, Square, Star, Volume2 } from "lucide-react";
 import { useState } from "react";
+import useTts from "../../hooks/useTts";
+import { getLangLabel } from "../../utils/languages";
 
 interface Props {
   value: string;
@@ -11,6 +12,7 @@ interface Props {
 export default function TranslateOutput({ value, isTranslating, lang }: Props) {
   const [copied, setCopied] = useState(false);
   const [starred, setStarred] = useState(false);
+  const { isLoading, isSpeaking, speak, stop } = useTts();
 
   const handleCopy = async () => {
     if (!value) return;
@@ -20,11 +22,17 @@ export default function TranslateOutput({ value, isTranslating, lang }: Props) {
   };
 
   const handleSpeak = () => {
-    if (!value) return;
-    const utterance = new SpeechSynthesisUtterance(value);
-    utterance.lang = lang;
-    speechSynthesis.speak(utterance);
+    if (!value.trim()) return;
+
+    if (isLoading || isSpeaking) {
+      stop();
+      return;
+    }
+
+    void speak({ text: value, lang });
   };
+
+  const isTtsBusy = isLoading || isSpeaking;
 
   return (
     <div className="flex flex-col bg-gray-50/50">
@@ -48,16 +56,28 @@ export default function TranslateOutput({ value, isTranslating, lang }: Props) {
       <div className="flex items-center gap-1 border-t border-gray-200 px-4 py-3">
         {/* TTS 듣기 */}
         <button
+          type="button"
           onClick={handleSpeak}
           disabled={!value}
           className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 disabled:opacity-30"
-          title={`${getLangLabel(lang)} 듣기`}
+          title={
+            isTtsBusy
+              ? "음성 재생 중지"
+              : `${getLangLabel(lang)} 듣기`
+          }
         >
-          <Volume2 className="h-5 w-5" />
+          {isLoading ? (
+            <LoaderCircle className="h-5 w-5 animate-spin" />
+          ) : isSpeaking ? (
+            <Square className="h-5 w-5" />
+          ) : (
+            <Volume2 className="h-5 w-5" />
+          )}
         </button>
 
         {/* 복사 */}
         <button
+          type="button"
           onClick={handleCopy}
           disabled={!value}
           className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 disabled:opacity-30"
@@ -68,6 +88,7 @@ export default function TranslateOutput({ value, isTranslating, lang }: Props) {
 
         {/* 즐겨찾기 */}
         <button
+          type="button"
           onClick={() => value && setStarred(!starred)}
           disabled={!value}
           className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 disabled:opacity-30"
@@ -80,6 +101,7 @@ export default function TranslateOutput({ value, isTranslating, lang }: Props) {
 
         {/* 공유 / 내보내기 */}
         <button
+          type="button"
           disabled={!value}
           className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 disabled:opacity-30"
           title="내보내기"

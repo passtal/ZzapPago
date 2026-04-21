@@ -1,4 +1,5 @@
-import { Volume2, ClipboardList } from "lucide-react";
+import { ClipboardList, LoaderCircle, Square, Volume2 } from "lucide-react";
+import useTts from "../../hooks/useTts";
 import { getLangLabel } from "../../utils/languages";
 
 const MAX_CHARS = 3000;
@@ -18,6 +19,8 @@ export default function TranslateInput({
   isTranslating,
   lang,
 }: Props) {
+  const { isLoading, isSpeaking, speak, stop } = useTts();
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -26,11 +29,17 @@ export default function TranslateInput({
   };
 
   const handleSpeak = () => {
-    if (!value) return;
-    const utterance = new SpeechSynthesisUtterance(value);
-    utterance.lang = lang;
-    speechSynthesis.speak(utterance);
+    if (!value.trim()) return;
+
+    if (isLoading || isSpeaking) {
+      stop();
+      return;
+    }
+
+    void speak({ text: value, lang });
   };
+
+  const isTtsBusy = isLoading || isSpeaking;
 
   return (
     <div className="flex flex-col">
@@ -61,16 +70,28 @@ export default function TranslateInput({
         <div className="flex items-center gap-1">
           {/* TTS 듣기 */}
           <button
+            type="button"
             onClick={handleSpeak}
             disabled={!value}
             className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 disabled:opacity-30"
-            title={`${getLangLabel(lang)} 듣기`}
+            title={
+              isTtsBusy
+                ? "음성 재생 중지"
+                : `${getLangLabel(lang)} 듣기`
+            }
           >
-            <Volume2 className="h-5 w-5" />
+            {isLoading ? (
+              <LoaderCircle className="h-5 w-5 animate-spin" />
+            ) : isSpeaking ? (
+              <Square className="h-5 w-5" />
+            ) : (
+              <Volume2 className="h-5 w-5" />
+            )}
           </button>
 
           {/* 사전 / 문장 목록 (placeholder) */}
           <button
+            type="button"
             disabled={!value}
             className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 disabled:opacity-30"
             title="사전"
@@ -81,6 +102,7 @@ export default function TranslateInput({
 
         {/* 번역하기 버튼 */}
         <button
+          type="button"
           onClick={onTranslate}
           disabled={!value.trim() || isTranslating}
           className="rounded-xl bg-emerald-500 px-6 py-2.5 text-sm font-bold text-white transition-all hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-40"

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { LearningCardResponse, readLearningCard } from "../api/learningCard";
+import { readLearningCard, LearningCardResponse } from "../api/learningCard";
 import MatchGame from "../components/game/MatchGame";
 import SwipeGame from "../components/game/SwipeGame";
 
@@ -77,12 +77,18 @@ export default function GamePage() {
 
       {!loading && !error && cards.length === 0 && (
         <div className="rounded-2xl border border-gray-200 bg-white px-5 py-8 text-sm text-gray-500 shadow-sm">
-          게임에 쓸 학습 카드가 없습니다.
+          게임에 사용할 학습 카드가 없습니다.
         </div>
       )}
 
       {!loading && !error && cards.length > 0 && (
-        <>{mode === "match" ? <MatchGame cards={cards} /> : <SwipeGame />}</>
+        <>
+          {mode === "match" ? (
+            <MatchGame cards={cards} />
+          ) : (
+            <SwipeGame cards={cards} onRefreshCards={loadGameCards} />
+          )}
+        </>
       )}
     </div>
   );

@@ -1,13 +1,14 @@
 from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
-from app.config.database import engine, Base
-from app.models import Translation, Export, Ranking, QuizScore, LearningCard  # noqa: F401
+from app.config.database import Base, engine
+from app.models import Export, LearningCard, QuizScore, Ranking, Translation  # noqa: F401
 from app.api.v1.translate import router as translate_router
 from app.api.v1.stt import router as stt_router
 from app.api.v1.learning_card import router as learning_card_router
 from app.api.v1.quiz_score import router as quiz_score_router
 from app.api.v1.ranking import router as ranking_router
 from app.api.v1.export import router as export_router
+from app.api.v1.tts import router as tts_router
 from app.websocket.realtime_translate import handle_realtime_translate
 
 # DB 테이블 자동 생성
@@ -34,6 +35,8 @@ app.include_router(stt_router, prefix="/api/v1")
 app.include_router(quiz_score_router, prefix="/api/v1")
 app.include_router(ranking_router, prefix="/api/v1")
 app.include_router(export_router, prefix="/api/v1")
+app.include_router(tts_router, prefix="/api/v1")
+
 
 @app.get("/")
 def root():
